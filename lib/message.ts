@@ -39,6 +39,7 @@ export type Parse = {
 export type ParseMessage = WAMessage & {
     parse: Parse
     self: {[key: string]: string}
+    isWaitTimeout: boolean
 }
 
 const message_buttonlist = (msg: ParseMessage): ParseMessage => {
