@@ -7,7 +7,7 @@
 // interact with the Whatsapp Web API.
 //------------------------------------------------------------------------------
 
-import WhatsappRH, { RhOptions } from './lib/client.js';
+import WhatsappRH, { RhOptions } from './lib/client';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -34,7 +34,7 @@ for (const directory of commandDirectories) {
   const commandFiles = fs.readdirSync(directoryPath);
 
   for (const file of commandFiles) {
-    if (!file.endsWith('.js')) {
+    if (!file.endsWith('.ts')) {
       continue;
     }
 
