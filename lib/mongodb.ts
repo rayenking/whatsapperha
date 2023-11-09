@@ -21,21 +21,6 @@ class RHDatabase {
     useDatabase(dbname: string): Db {
         return this.client.db(dbname)
     }
-
-    limitDefaultData() {
-        return {
-            name: 'silentmention',
-            sender: '',
-            limit: ''
-        }
-    }
-
-    adminDefaultData(m: any) {
-        return {
-            to: m.parse.to,
-            admins: []
-        }
-    }
 }
 
 export default RHDatabase
