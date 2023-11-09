@@ -89,9 +89,6 @@ class HelloCommand {
 //   - regex
 ```
 
-
-```
-
 ## Author
 
 - [Ryns](https://github.com/rayenking)
