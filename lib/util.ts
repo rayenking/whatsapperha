@@ -24,9 +24,7 @@ class UtilsRH {
     this.settings = this.database.collection('settings');
     this.whitelist = this.database.collection('whitelist');
 
-    this.owners = [
-      '6287859909669@s.whatsapp.net',
-    ];
+    this.owners = [];
 
     this.limit.createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 });
   }
