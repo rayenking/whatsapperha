@@ -92,13 +92,15 @@ export const hook = (type: string) => {
     }
 }
 
-export const waitSince = (type: string, id: string, msg: ParseMessage, timeout: number) => {
+export const waitSince = (type: string, id: string, msg: ParseMessage, timeout: number): Promise<ParseMessage> => {
     return new Promise((resolve, reject) => {
         const timeoutId = setTimeout(() => {
             const waitIndex = eventListener.findIndex(obj => obj.waitId === id)
             if (waitIndex !== -1){
                 eventListener.splice(waitIndex, 1)
-                resolve('timeout')
+                const timeoutMsg: ParseMessage = msg
+                timeoutMsg.isWaitTimeout = true
+                resolve(timeoutMsg)
             }
         }, timeout)
 
