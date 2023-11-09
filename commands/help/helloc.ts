@@ -1,4 +1,4 @@
-import { WASocket } from "@adiwajshing/baileys";
+import { WASocket } from "../../lib/baileys/lib";
 import { commands, entity, hook, waitSince } from "../../lib/hook";
 import { ParseMessage } from "../../lib/message";
 
