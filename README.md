@@ -67,12 +67,12 @@ class HelloCommand {
 ```
 
 ```ts
-@hook({ type: 'string' })
+@hook({ type: string })
 // Available types: text, mention, image, video, audio, location, sticker, caption, listResponse, buttonResponse, join, leave
-@Entity({ caseSensitive: false, chatType: 'all', ignoreSelf: true })
+@entity({ caseSensitive: boolean, chatType: string, ignoreSelf: boolean })
 // Available chatType: all, group, private (default: all)
-@commands({ command: 'string', type: 'startswith' })
-// Available types: startswith, contains, exact, endswith, regex
+@commands({ command: string, type: string })
+// Available types: startswith, contains, exact, endswith, regex (default: startswith)
 ```
 
 ## Author
