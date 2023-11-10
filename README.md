@@ -36,15 +36,18 @@ After setting up the `.env` file, you can run the following commands to start th
 - `yarn start`: Starts the application
 - `yarn start:erha`: Starts the application with PM2
 
-## Example Command
+## Example Command File
 
-Create new file in commands folder and create the sub folder
+Inside the `commands` folder create a new folder called `folderName`.
+You can replace `folderName` with the desired name for your subfolder.
+
+Inside the "folderName" folder, create your files with `.ts` extension.
 
 ```
 commands
-  - folderName
-    - helloc.ts
-    - greeting.ts
+  └── folderName
+      ├── helloc.ts
+      └── greeting.ts
 ```
 
 ```ts
@@ -64,29 +67,12 @@ class HelloCommand {
 ```
 
 ```ts
-@hook(type: string)
-// type
-//   - text
-//   - mention
-//   - image
-//   - video
-//   - audio
-//   - location
-//   - sticker
-//   - caption
-//   - listResponse
-//   - buttonResponse
-//   - join
-//   - leave
-@entity({case_sensitive = false, chat_type = 'all', ignoreSelf = true})
-// chat_type (all, group, private) default to 'all'
-@commands(command: string, type: string = 'startswith')
-// type (default to 'startswith')
-//   - starswith
-//   - contains
-//   - exact
-//   - endswith
-//   - regex
+@hook({ type: 'string' })
+// Available types: text, mention, image, video, audio, location, sticker, caption, listResponse, buttonResponse, join, leave
+@Entity({ caseSensitive: false, chatType: 'all', ignoreSelf: true })
+// Available chatType: all, group, private (default: all)
+@commands({ command: 'string', type: 'startswith' })
+// Available types: startswith, contains, exact, endswith, regex
 ```
 
 ## Author
