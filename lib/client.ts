@@ -5,7 +5,7 @@
 
 import makeWASocket, { DisconnectReason, useMultiFileAuthState, makeInMemoryStore, WASocket } from './baileys/lib';
 import { message_parse } from './message';
-import RHDatabase from './mongodb';
+import { connectToMongoDB } from './mongodb';
 import UtilsRH from './util';
 
 import P from 'pino';
@@ -19,16 +19,10 @@ export type RhOptions = {
     storePath: string;
 }
 
-export type ErhaClient = WASocket & {
-    utils: UtilsRH;
-    db: RHDatabase;
-}
-
 class WhatsappRH {
 
     options: RhOptions;
     store: any;
-    db: RHDatabase;
     user: any;
     utils: UtilsRH;
     socket!: WASocket;
@@ -50,10 +44,11 @@ class WhatsappRH {
         this.store = makeInMemoryStore({ });
         this.set_store();
 
-        this.db = new RHDatabase();
         this.user = null;
 
-        this.utils = new UtilsRH(this.socket, this.db);
+        this.utils = new UtilsRH(this.socket);
+
+        connectToMongoDB()
 
     }
 
@@ -78,7 +73,7 @@ class WhatsappRH {
                         }
                     } else if (connection === 'open') {
                         this.user = this.socket.user;
-                        this.utils = new UtilsRH(this.socket, this.db)
+                        this.utils = new UtilsRH(this.socket)
                         console.log(`WhatsappRH (RynsHook): Login successful. Welcome ${this.socket.user?.name}!`);
                     }
                 }
@@ -101,7 +96,7 @@ class WhatsappRH {
                         try {
                             call(this.socket, message_parse(msg))
                         } catch (error) {
-                            this.socket.sendMessage('6287859909669@s.whatsapp.net', {text: `Error: ${error}`})
+                            this.socket.sendMessage(process.env.DEBUG_NUMBER || '', {text: `Error: ${error}`})
                         }
                     }
                 }

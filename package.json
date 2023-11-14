@@ -24,7 +24,7 @@
     "cache-manager": "^5.2.3",
     "dotenv": "^16.0.3",
     "moment-timezone": "^0.5.43",
-    "mongodb": "^5.1.0",
+    "mongoose": "^8.0.0",
     "node-fetch": "3",
     "pino": "^8.16.1",
     "qrcode-terminal": "^0.12.0",
