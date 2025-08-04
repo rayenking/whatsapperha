@@ -2,109 +2,162 @@
 //------------------------------------------------------------------------------
 // Copyright (c) 2022, Ryns (https://github.com/rynkings).
 
-import { WAMessage, proto } from "./baileys/lib";
+import { downloadMediaMessage } from "@rhook/baileys";
+import { writeFile } from 'fs/promises'
+import { RhClient } from "@rhook/rh";
+import { ParseMessage } from "@rhook/types";
+import { HookParameter } from "./types";
+import { waitSince } from "./hook";
 
-//------------------------------------------------------------------------------
-type ListResponse = {
-    selectedText: string | undefined | null;
-    selectedRowId: string | undefined | null;
-    listType: proto.Message.ListResponseMessage.ListType | null | undefined;
-    title: string | null| undefined;
-    description: string | null | undefined;
-    buttonText: string | null | undefined;
-    footerText: string | null | undefined;
-    sections: proto.Message.ListMessage.ISection[] | null | undefined;
-
-}
-
-type ButtonResponse = {
-    selectedButtonId: string | null | undefined;
-    selectedDisplayText: string | null | undefined;
-}
-
-export type Parse = {
-    sender: string;
-    to: string;
-    text: string;
-    mentionedJid: string[];
-    isGroup: boolean;
-    isMention: boolean;
-    isReply: boolean;
-    type: string | number;
-    self: {[key: string]: string};
-    number: string;
-    list: ListResponse | null | undefined;
-    button: ButtonResponse | null | undefined;
-}
-export type ParseMessage = WAMessage & {
-    parse: Parse
-    self: {[key: string]: string}
-    isWaitTimeout: boolean
-}
-
-const message_buttonlist = (msg: ParseMessage): ParseMessage => {
-    if (msg.parse.type === 'listResponseMessage'){
-        const listResponse = msg.message?.listResponseMessage;
+// Utility function to handle list and button messages
+const handleButtonAndListResponse = (msg: ParseMessage): void => {
+    const { parse, message } = msg;
+    
+    if (parse.type === 'listResponseMessage') {
+        const listResponse = message?.listResponseMessage;
         const listQuotedResponse = listResponse?.contextInfo?.quotedMessage?.listMessage;
-        msg.parse.list = {
-            selectedText: listResponse?.title,
-            selectedRowId: listResponse?.singleSelectReply?.selectedRowId,
-            listType: listResponse?.listType,
-            title: listQuotedResponse?.title,
-            description: listQuotedResponse?.description,
-            buttonText: listQuotedResponse?.buttonText,
-            footerText: listQuotedResponse?.footerText,
-            sections: listQuotedResponse?.sections,
+        
+        parse.list = {
+            selectedText: listResponse?.title || null,
+            selectedRowId: listResponse?.singleSelectReply?.selectedRowId || null,
+            listType: listResponse?.listType || null,
+            title: listQuotedResponse?.title || null,
+            description: listQuotedResponse?.description || null,
+            buttonText: listQuotedResponse?.buttonText || null,
+            footerText: listQuotedResponse?.footerText || null,
+            sections: listQuotedResponse?.sections || null,
         };
-    } else if (msg.parse.type === 'buttonsResponseMessage'){
-        const buttonsResponse = msg.message?.buttonsResponseMessage;
-        msg.parse.button = {
-            selectedButtonId: buttonsResponse?.selectedButtonId,
-            selectedDisplayText: buttonsResponse?.selectedDisplayText
-        }
+    } else if (parse.type === 'buttonsResponseMessage') {
+        const buttonsResponse = message?.buttonsResponseMessage;
+
+        parse.button = {
+            selectedButtonId: buttonsResponse?.selectedButtonId || null,
+            selectedDisplayText: buttonsResponse?.selectedDisplayText || null,
+        };
     }
-    return msg;
+};
+
+const handleFunctions = (msg: ParseMessage, client: RhClient): void => {
+    msg.edit = (text: string) => {
+        return client.whatsapp.sendMessage(msg.to, { text, edit: msg.key});
+    };
+
+    msg.editWithMentions = (text: string, mentionedJid: string[]) => {
+        return client.whatsapp.sendMessage(msg.to, { text, edit: msg.key, mentions: mentionedJid });
+    };
+
+    msg.send = (text: string) => {
+        return client.whatsapp.sendMessage(msg.to, { text });
+    };
+
+    msg.sendMention = (text: string, mentionedJid: string[]) => {
+        return client.sendMentions(msg.to, text, mentionedJid);
+    };
+
+    msg.reply = (text: string) => {
+        return client.whatsapp.sendMessage(msg.to, { text }, { quoted: msg});
+    };
+
+    msg.delete = () => {
+        return client.deleteMessage(msg.to, msg.key)
+    }
+
+    // msg.deleteMe = () => {
+    //     return client.deleteMessageMe(msg.to, msg.messageId, msg.fromMe, msg.messageTimestamp)
+    // }
+
+    msg.forward = (to: string, force: boolean = false) => {
+        return client.forwardMessage(to, msg, force)
+    }
+    
+    msg.download = async () => {
+        let path: string = '';
+        switch (msg.parse.type) {
+            case 'imageMessage':
+                var buffer = await downloadMediaMessage(msg, 'buffer', { })
+                await writeFile(`./downloads/${msg.key.id}.jpg`, buffer)
+                path = `./downloads/${msg.key.id}.jpg`
+                break;
+            case 'documentMessage':
+                var buffer = await downloadMediaMessage(msg, 'buffer', { })
+                await writeFile(`./downloads/${msg.key.id}.jpg`, buffer)
+                path = `./downloads/${msg.key.id}.jpg`
+                break;
+            case 'audioMessage':
+                var buffer = await downloadMediaMessage(msg, 'buffer', { })
+                await writeFile(`./downloads/${msg.key.id}.jpg`, buffer)
+                path = `./downloads/${msg.key.id}.jpg`
+                break;
+            case 'videoMessage':
+                var buffer = await downloadMediaMessage(msg, 'buffer', { })
+                await writeFile(`./downloads/${msg.key.id}.jpg`, buffer)
+                path = `./downloads/${msg.key.id}.jpg`
+                break;
+        }
+        return path;
+    }
 }
 
-export const message_parse = (msg: ParseMessage): ParseMessage => {
-    let isGroup = msg.key.remoteJid?.includes('@g.us') || false;
-    let isMention = (msg.message?.extendedTextMessage?.contextInfo?.mentionedJid?.length || 0) > 0 || false;
-    let isReply = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage !== undefined || false;
-    let mentionedJid = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
-    let sender = isGroup ? msg.key.participant : msg.key.remoteJid;
+// Main parsing function
+export const MessageParse = (msg: ParseMessage, client: RhClient): ParseMessage => {
+    const isGroup = msg.key.remoteJid?.includes('@g.us') || false;
+    const extendedText = msg.message?.extendedTextMessage;
+    const contextInfo = extendedText?.contextInfo;
+
+    const isMention = Boolean(contextInfo?.mentionedJid?.length);
+    const isReply = Boolean(contextInfo?.quotedMessage);
+    const mentionedJid = contextInfo?.mentionedJid || [];
+
+    let sender = isGroup ? msg.key.participant || '' : msg.key.remoteJid || '';
     let to = msg.key.remoteJid || '';
-    let text = msg.message?.conversation || msg.message?.extendedTextMessage?.text || '';
-    let type = msg.message ? Object.keys(msg.message)[0] : (msg.messageStubType || '').toString();
-    let self = msg.self || {};
-    if (msg.key.fromMe){
-        sender = self.id || '';
+    let text = msg.message?.conversation || extendedText?.text || '';
+    let type = msg.message ? Object.keys(msg.message)[0] : msg.messageStubType?.toString() || '';
+
+    if (msg.key.fromMe) {
+        sender = msg.self?.id || '';
         to = msg.key.remoteJid || '';
     }
 
-    if (type === 'senderKeyDistributionMessage'){
-        let senderKeyDistributionMessage = msg.message ? Object.keys(msg.message.senderKeyDistributionMessage || {}) : [];
-        type = senderKeyDistributionMessage[senderKeyDistributionMessage.length - 1] || '';
+    if (type === 'senderKeyDistributionMessage') {
+        const senderKeyTypes = Object.keys(msg.message?.senderKeyDistributionMessage || {});
+        type = senderKeyTypes[senderKeyTypes.length - 1] || '';
     }
 
-    if (type === 'messageContextInfo'){
-        let typeMessages = Object.keys(msg.message || {})
-        type = typeMessages[typeMessages.length - 1] || ''
+    if (type === 'messageContextInfo') {
+        const typeMessages = Object.keys(msg.message || {});
+        type = typeMessages[typeMessages.length - 1] || '';
     }
 
+    msg.to = to;
+    msg.sender = sender;
+    msg.messageId = msg.key.id || '';
+    msg.fromMe = msg.key.fromMe || false;
     msg.parse = {
-        sender: sender || '',
-        to: to || '',
-        text: text || '',
-        mentionedJid: mentionedJid || [],
-        isGroup: isGroup || false,
-        isMention: isMention || false,
-        isReply: isReply || false,
-        type: type || '',
-        self: self || {},
-        number: sender?.replace('@s.whatsapp.net', '') || '',
+        sender: sender,
+        to,
+        text,
+        mentionedJid,
+        isGroup,
+        isMention,
+        isReply,
+        type,
+        self: msg.self,
+        number: sender.replace('@s.whatsapp.net', '') || '',
         list: null,
-        button: null
-    }
-    msg = message_buttonlist(msg);
+        button: null,
+    };
+        msg.waitSince = (params: HookParameter) => waitSince({
+            types: params.types,
+            waitMsg: msg,
+            timeout: params.timeout || 10000,
+            timeoutCallback: params.timeoutCallback,
+            cancelText: params.cancelText || 'Cancelled.',
+            ignoreSelf: params.ignoreSelf || true,
+            ignoreId: params.ignoreId || '',
+        })
+
+    handleButtonAndListResponse(msg);
+    handleFunctions(msg, client);
+
     return msg;
-}
+};

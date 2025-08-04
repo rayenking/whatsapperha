@@ -1,7 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
-import tar from 'tar';
+import { exec } from 'child_process';
 
 async function ensureDirExists(dirPath: string): Promise<void> {
     if (!fs.existsSync(dirPath)) {
@@ -68,9 +68,14 @@ async function downloadFile(url: string, filePath: string): Promise<void> {
 }
 
 async function extractFile(sourcePath: string, destinationPath: string): Promise<void> {
-  await tar.x({
-    file: sourcePath,
-    cwd: path.dirname(destinationPath),
+  return new Promise((resolve, reject) => {
+    exec(`tar -x -f ${sourcePath} -C ${path.dirname(destinationPath)}`, (error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
   });
 }
 

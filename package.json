@@ -2,39 +2,37 @@
   "name": "whatsapp-rhook",
   "version": "1.0.0",
   "type": "commonjs",
-  "description": "",
+  "description": "A WhatsApp automation project using Baileys.",
   "main": "index.js",
   "directories": {
     "lib": "lib"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npx ts-node main.ts",
-    "start:erha": "pm2 start npm --name \"erha\" -- start",
-    "install-baileys": "npx ts-node lib/baileys.ts",
-    "dev": "npx ts-node main.ts"
+    "build": "npx tsc",
+    "start": "node -r tsconfig-paths/register dist/main.js",
+    "start:erha": "pm2 start npm --name \"whatsapperha\" -- start",
+    "restart": "pm2 restart whatsapperha",
+    "stop": "pm2 stop whatsapperha",
+    "install-baileys": "npx ts-node lib/baileysDownloader.ts",
+    "dev": "cross-env TS_NODE_FILES=true TS_NODE_TRANSPILE_ONLY=true ts-node -r tsconfig-paths/register main.ts"
   },
   "author": "Ryns",
   "license": "ISC",
   "dependencies": {
-    "@adiwajshing/baileys": "@whiskeysockets/baileys",
-    "@adiwajshing/keyed-db": "^0.2.4",
-    "@hapi/boom": "^10.0.1",
-    "axios": "^1.5.1",
-    "cache-manager": "^5.2.3",
-    "dotenv": "^16.0.3",
-    "moment-timezone": "^0.5.43",
-    "mongoose": "^8.0.0",
-    "node-fetch": "3",
-    "pino": "^8.16.1",
+    "baileys": "github:WhiskeySockets/Baileys",
+    "dotenv": "^16.4.5",
+    "mongoose": "^8.5.3",
+    "pino-pretty": "^11.2.2",
+    "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
-    "querystring": "^0.2.1",
-    "tar": "^6.1.15",
-    "typescript": "^5.1.3",
-    "uuid": "^9.0.0"
+    "tar": "^7.4.3",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.5.4"
   },
   "devDependencies": {
-    "@types/tar": "^6.1.5",
-    "ts-node": "^10.9.1"
+    "@types/qrcode": "^1.5.5",
+    "cross-env": "^7.0.3",
+    "ts-node": "^10.9.2"
   }
 }

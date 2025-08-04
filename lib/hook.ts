@@ -3,18 +3,31 @@
 // Copyright (c) 2022, Ryns (https://github.com/rynkings).
 //------------------------------------------------------------------------------
 
-import { WASocket } from "./baileys/lib";
-import { ParseMessage } from "./message";
+import { ParseMessage } from "@rhook/types";
+import { RhClient, DEFAULT_PREFIX } from "@rhook/rh";
+import Pino from 'pino'
+import fs from 'fs';
 
 type MatchTypes = { [key: string]: boolean}
 type ChatTypes = { [key: string]: boolean}
 
+const rlog = Pino({
+  level: process.env.LOG_LEVEL || 'info',
+  name: 'whatsapp-rhook',
+  transport: {
+      target: 'pino-pretty',
+  }
+})
+
 export type EventListener = {
     command: string;
+    prefix: string;
     type: string;
     case_sensitive: boolean;
     chat_type: string;
     ignoreSelf: boolean;
+    ignorePublic: boolean;
+    isAdmin: boolean;
     waitId: string;
     fname: string;
     callback: Function;
@@ -22,20 +35,40 @@ export type EventListener = {
 }
 
 export const eventListener: EventListener[] = [];
+export const admins: string[] = process.env.ADMINS?.split(',') || [];
 
-export const commands = (command: string, type: string = 'startswith') => {
+export const updateEnvAdmins = (admins: string[]) => {
+  const envFilePath = '.env';
+  const envContent = fs.readFileSync(envFilePath, 'utf8');
+  const updatedEnvContent = envContent.replace(/ADMINS=.*/, `ADMINS=${admins.join(',')}`);
+  fs.writeFileSync(envFilePath, updatedEnvContent, 'utf8');
+};
+
+export const updatePrefix = (prefix: string, ignoreCommand: string) => {
+    eventListener.forEach(event => {
+        if (event.command !== ignoreCommand){
+            event.prefix = prefix
+        }
+    })
+}
+
+export const commands = (command: string, type: 'startswith' | 'contains' | 'exact' | 'endswith' | 'regex' = 'startswith', prefix: string = DEFAULT_PREFIX) => {
     return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
         const indexEvent = eventListener.findIndex(obj => obj.fname === propertyKey)
         if (indexEvent !== -1){
             eventListener[indexEvent].command = command
             eventListener[indexEvent].type = type
+            eventListener[indexEvent].prefix = prefix
         } else {
             let event: EventListener = {
                 command,
+                prefix: prefix,
                 type,
                 case_sensitive: false,
                 chat_type: 'all',
                 ignoreSelf: true,
+                ignorePublic: false,
+                isAdmin: false,
                 waitId: '',
                 fname: propertyKey,
                 callback: descriptor.value,
@@ -46,20 +79,31 @@ export const commands = (command: string, type: string = 'startswith') => {
     }
 }
 
-export const entity = ({case_sensitive = false, chat_type = 'all', ignoreSelf = true}) => {
+type ChatTypeOptions = 'all' | 'group' | 'private';
+
+export const entity = ({case_sensitive = false, chat_type = 'all' as ChatTypeOptions, ignoreSelf = true, ignorePublic = false, isAdmin = false}) => {
+    if (!['all', 'group', 'private'].includes(chat_type)) {
+        throw new Error(`Invalid chat_type: ${chat_type}. Allowed values are 'all', 'group', 'private'.`);
+    }
+
     return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
         const indexEvent = eventListener.findIndex(obj => obj.fname === propertyKey)
         if (indexEvent !== -1){
             eventListener[indexEvent].case_sensitive = case_sensitive
             eventListener[indexEvent].chat_type = chat_type
             eventListener[indexEvent].ignoreSelf = ignoreSelf
+            eventListener[indexEvent].ignorePublic = ignorePublic
+            eventListener[indexEvent].isAdmin = isAdmin
         } else {
             let event: EventListener = {
                 command: '',
                 type: 'startswith',
+                prefix: '',
                 case_sensitive: case_sensitive,
                 chat_type: chat_type,
                 ignoreSelf: ignoreSelf,
+                ignorePublic: ignorePublic,
+                isAdmin: isAdmin,
                 waitId: '',
                 fname: propertyKey,
                 callback: descriptor.value,
@@ -70,7 +114,9 @@ export const entity = ({case_sensitive = false, chat_type = 'all', ignoreSelf = 
     }
 }
 
-export const hook = (type: string) => {
+export type HookTypes = 'text' | 'image' | 'video' | 'audio' | 'location' | 'sticker' | 'caption' | 'listResponse' | 'buttonResponse' | 'join' | 'leave' | 'contact';
+
+export const hook = (type: HookTypes) => {
     return (target: any, propertyKey: string, descriptor: PropertyDescriptor) => {
         const indexEvent = eventListener.findIndex(obj => obj.fname === propertyKey)
         if (indexEvent !== -1){
@@ -78,10 +124,13 @@ export const hook = (type: string) => {
         } else {
             let event: EventListener = {
                 command: '',
+                prefix: '',
                 type: 'startswith',
                 case_sensitive: false,
                 chat_type: 'all',
                 ignoreSelf: true,
+                ignorePublic: false,
+                isAdmin: false,
                 waitId: '',
                 fname: propertyKey,
                 callback: descriptor.value,
@@ -92,47 +141,110 @@ export const hook = (type: string) => {
     }
 }
 
-export const waitSince = (type: string, id: string, msg: ParseMessage, timeout: number): Promise<ParseMessage> => {
+export type HookParameterType = {
+    types: HookTypes[] | HookTypes;
+    waitMsg: ParseMessage;
+    timeout: number;
+    timeoutCallback?: () => void;
+    cancelText: string;
+    ignoreSelf: boolean;
+    ignoreId: string;
+}
+export const waitSince = ({types, waitMsg, timeoutCallback, timeout = 10000, cancelText = 'Cancelled.', ignoreSelf = true, ignoreId = ''}: HookParameterType): Promise<ParseMessage> => {
     return new Promise((resolve, reject) => {
-        const timeoutId = setTimeout(() => {
-            const waitIndex = eventListener.findIndex(obj => obj.waitId === id)
-            if (waitIndex !== -1){
-                eventListener.splice(waitIndex, 1)
-                const timeoutMsg: ParseMessage = msg
-                timeoutMsg.isWaitTimeout = true
-                resolve(timeoutMsg)
-            }
-        }, timeout)
+      const id = crypto.randomUUID();
+      const timeoutId = setTimeout(() => {
+          const waitIndexes = eventListener.reduce((indexes, obj, index) => {
+              if (obj.waitId === id) indexes.push(index);
+              return indexes;
+          }, [] as number[]);
 
-        let event: EventListener = {
-            command: '',
-            type: 'startswith',
-            case_sensitive: false,
-            chat_type: 'all',
-            ignoreSelf: true,
-            waitId: id,
-            fname: '',
-            callback: async (client: WASocket, message: ParseMessage) => {
-                if (msg.parse.sender === message.parse.sender){
-                    const waitIndex = eventListener.findIndex(obj => obj.waitId === id)
-                    if (waitIndex !== -1){
-                        eventListener.splice(waitIndex, 1)
-                        clearTimeout(timeoutId)
-                        resolve(message)
+          if (waitIndexes.length > 0) {
+              for (let i = waitIndexes.length - 1; i >= 0; i--) {
+                  eventListener.splice(waitIndexes[i], 1);
+              }
+              const timeoutMsg: ParseMessage = waitMsg;
+              timeoutMsg.isWaitTimeout = true;
+              if (timeoutCallback) {
+                  timeoutCallback();
+              } else {
+                  waitMsg.send('Timeout!');
+              }
+              resolve(timeoutMsg);
+          }
+      }, timeout)
+
+      if (!Array.isArray(types)) {
+        types = [types]
+      }
+      let event: EventListener = {
+        command: '',
+        prefix: '',
+        type: 'startswith',
+        case_sensitive: false,
+        chat_type: 'all',
+        ignoreSelf: ignoreSelf === true,
+        ignorePublic: false,
+        isAdmin: false,
+        waitId: id,
+        fname: '',
+        callback: async (client: RhClient, message: ParseMessage) => {
+            if (waitMsg.parse.sender === message.parse.sender && message.messageId !== ignoreId) {
+                const waitIndexes = eventListener.reduce((indexes, obj, index) => {
+                    if (obj.waitId === id) indexes.push(index);
+                    return indexes;
+                }, [] as number[]);
+                if (waitIndexes.length > 0) {
+                    for (let i = waitIndexes.length - 1; i >= 0; i--) {
+                        eventListener.splice(waitIndexes[i], 1);
+                    }
+                    clearTimeout(timeoutId)
+                    if (message.parse.text.toLocaleLowerCase() === 'cancel') {
+                        message.isWaitTimeout = true;
+                        message.send(cancelText || 'Cancelled.');
+                        resolve(message);
+                    } else {
+                        resolve(message);
                     }
                 }
-            },
-            hook: { [type]: true}
-        }
-        eventListener.push(event)
-    });
+            }
+        },
+        hook: types.reduce((acc, type) => {
+          acc[type] = true;
+          return acc;
+        }, {} as { [key: string]: boolean }),
+      }
+      eventListener.push(event)
+    })
 }
 
-export const call = (client: WASocket, message: ParseMessage) => {
+export const call = (client: RhClient, message: ParseMessage) => {
+    if (message.parse.text) {
+        rlog.info(`${message.to} - ${message.parse.text.slice(0, 100)}`)
+    }
+    if (client.options.debug) {
+        console.log(JSON.stringify(message, null, 2))
+    }
     const { type, isMention, mentionedJid } = message.parse;
-  
+
+    if (message.parse.self){
+      if (!admins.includes(message.parse.self.id)){
+        admins.push(message.parse.self.id);
+
+        updateEnvAdmins(admins);
+      }
+    }
+
     eventListener.forEach((event) => {
-      if (event.ignoreSelf && message.parse.sender === message.parse.self.id) {
+      if (event.ignoreSelf && message.parse.sender === message.parse.self?.id) {
+        return;
+      }
+
+      if (event.ignorePublic && message.sender !== message.parse.self?.id) {
+        return;
+      }
+
+      if (event.isAdmin && !admins.includes(message.sender)) {
         return;
       }
   
@@ -141,16 +253,21 @@ export const call = (client: WASocket, message: ParseMessage) => {
           event.callback(client, message);
         }
       } else if (event.hook?.mention && isMention) {
-        const userid = message.parse.self.id;
-        const number = userid.split(':')[0] || userid.split('@')[0];
-  
-        for (const mentioned of mentionedJid) {
-          if (mentioned.replace('@s.whatsapp.net', '').includes(number)) {
-            message.parse.text = message.parse.text.replace(/@\S+/g, '').trim();
-            if (condition(message.parse, event)) {
-              event.callback(client, message);
+        const userid = message.parse.self?.id;
+        const number = userid?.split(':')[0] || userid?.split('@')[0];
+        if (number) {
+          for (const mentioned of mentionedJid) {
+            if (mentioned.replace('@s.whatsapp.net', '').includes(number)) {
+              message.parse.text = message.parse.text.replace(/@\S+/g, '').trim();
+              if (condition(message.parse, event)) {
+                event.callback(client, message);
+              }
             }
           }
+        }
+      } else if (event.hook?.contact && type === 'contactMessage') {
+        if (condition(message.parse, event)) {
+          event.callback(client, message);
         }
       } else if (event.hook?.image && type === 'imageMessage') {
         if (condition(message.parse, event)) {
@@ -188,11 +305,11 @@ export const call = (client: WASocket, message: ParseMessage) => {
         if (condition(message.parse, event)) {
           event.callback(client, message);
         }
-      } else if (event.hook?.join && type === 27) {
+      } else if (event.hook?.join && type === '27') {
         if (condition(message.parse, event)) {
           event.callback(client, message);
         }
-      } else if (event.hook?.leave && type === 28) {
+      } else if (event.hook?.leave && type === '28') {
         if (condition(message.parse, event)) {
           event.callback(client, message);
         }
@@ -207,9 +324,9 @@ const condition = (message: any, event: EventListener): boolean => {
     const commands = event.command.split(',').map(cmd => case_sensitive ? cmd.trim() : cmd.trim().toLowerCase());
 
     const matchTypes: MatchTypes = {
-        'startswith': commands.some(command => messageText.startsWith(command)),
-        'contains': commands.some(command => messageText.includes(command)),
-        'exact': commands.some(command => messageText === command),
+        'startswith': commands.some(command => messageText.startsWith(event.prefix + command)),
+        'contains': commands.some(command => messageText.includes(event.prefix + command)),
+        'exact': commands.some(command => messageText === event.prefix + command),
         'endswith': commands.some(command => messageText.endsWith(command)),
         'regex': commands.some(command => messageText.match(command))
     }

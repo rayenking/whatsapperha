@@ -17,3 +17,18 @@ yarn-debug.log*
 yarn-error.log*
 
 /data
+
+/dist
+
+# Ignore commands folder except help
+/commands/*
+
+!/commands/dialog/
+!/commands/dialog/dialogExample.ts
+!/commands/owners/
+!/commands/owners/whitelistCommand.ts
+!/commands/owners/admin.ts
+
+!/commands/help/
+!/commands/help/**
+

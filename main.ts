@@ -7,34 +7,39 @@
 // interact with the Whatsapp Web API.
 //------------------------------------------------------------------------------
 
-import WhatsappRH, { RhOptions } from './lib/client';
+import { WhatsappClient } from '@rhook/client';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { WhatsappClientOptions } from '@rhook/types';
+import { setDefaultPrefix } from '@rhook/rh';
 
 dotenv.config();
 
-const commandPath = './commands';
+const isCompiled = __filename.endsWith('.js');
+const baseDir = isCompiled ? './dist' : '.';
+const commandPath = path.join(baseDir, 'commands');
 const commandDirectories = fs.readdirSync(commandPath, { withFileTypes: true })
   .filter(dirent => dirent.isDirectory())
   .map(dirent => dirent.name);
 
-const options: RhOptions = {
-  qrTerminal: true,
-  statePath: '',
-  storePath: ''
+const options: WhatsappClientOptions = {
+  pairingCode: false
 };
 
-const rynshook = new WhatsappRH(options);
+const rynshook = new WhatsappClient(options);
 
-export const rh = rynshook;
+rynshook.rlog.info(isCompiled ? 'Running in compiled mode' : 'Running in development mode');
+rynshook.rlog.info(`Base Directory: ${baseDir}`);
+
+setDefaultPrefix('!')
 
 for (const directory of commandDirectories) {
   const directoryPath = path.join(commandPath, directory);
   const commandFiles = fs.readdirSync(directoryPath);
 
   for (const file of commandFiles) {
-    if (!file.endsWith('.ts')) {
+    if (!file.endsWith('.ts') && !file.endsWith('.js')) {
       continue;
     }
 
@@ -44,16 +49,18 @@ for (const directory of commandDirectories) {
       // You can execute the file using eval() function like this:
     //   eval(fileContents);
       // Or, you can use import() statement like this:
-      import(`./${filePath}`);
-      console.log(`Import Success : ${filePath}`);
+      // const modulePath = filePath.replace(/\.(ts|js)$/, '');
+      // import(`./${filePath}`);
+      const importPath = isCompiled 
+        ? filePath.replace('./dist/', './')
+        : filePath;
+        
+      import(importPath);
+      rynshook.rlog.info(`Import Success : ${filePath}`);
     } catch (error) {
-      console.log(`Import Error : ${directoryPath}/${file}`);
+      rynshook.rlog.error(`Import Error : ${directoryPath}/${file}`);
     }
   }
 }
 
-async function main() {
-  await rynshook.connect();
-}
-
-main();
+rynshook.initialize()

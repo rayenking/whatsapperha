@@ -1,7 +1,6 @@
-import { commands, entity, hook, waitSince } from "../../lib/hook";
-import { WASocket } from "../../lib/baileys/lib";
-import { ParseMessage } from "../../lib/message";
-import { rh } from "../../main";
+import { commands, entity, hook, waitSince } from "@rhook/hook";
+import { RhClient } from "@rhook/rh";
+import { ParseMessage } from "@rhook/types";
 import WhitelistHelper from "../../helpers/WhitelistHelper";
 import { Whitelist } from "../../models/whitelist";
 
@@ -26,39 +25,39 @@ class WhitelistCommand {
     @commands('whitelist, wl')
     @entity({ignoreSelf: true})
     @hook('text')
-    async whitelist(client: WASocket, message: ParseMessage) {
+    async whitelist(client: RhClient, message: ParseMessage) {
         let args = message.parse.text.split(' ').slice(1)
-        if (args.length === 0) return client.sendMessage(message.parse.to, {text: 'Usage: whitelist <add|remove> <phoneNumber>'})
+        if (args.length === 0) return client.sendMessage(message.parse.to, 'Usage: whitelist <add|remove> <phoneNumber>')
         const whitelistHelper = new WhitelistHelper();
         const cmd = args[0]
         switch(cmd){
         case 'add':
             var number = parseNumber(args[1])
             var isWhitelist = await whitelistHelper.isWhitelist(number)
-            if (isWhitelist) return client.sendMessage(message.parse.to, {text: `${number} is already in whitelist`})
+            if (isWhitelist) return client.sendMessage(message.parse.to, `${number} is already in whitelist`)
             const add = await whitelistHelper.addWhitelist({Number: number} as Whitelist)
             if (add){
-                await client.sendMessage(message.parse.to, {text: `${number} added to whitelist.`})
+                await client.sendMessage(message.parse.to, `${number} added to whitelist.`)
             } else {
-                await client.sendMessage(message.parse.to, {text: `${number} failed to add.`})
+                await client.sendMessage(message.parse.to, `${number} failed to add.`)
             }
             break
         case 'remove':
             var number = parseNumber(args[1])
             var isWhitelist = await whitelistHelper.isWhitelist(number)
-            if (!isWhitelist) return client.sendMessage(message.parse.to, {text: `${number} not in whitelist`})
+            if (!isWhitelist) return client.sendMessage(message.parse.to, `${number} not in whitelist`)
             const del = await whitelistHelper.delWhitelist(number)
             if (del){
-                await client.sendMessage(message.parse.to, {text: `${number} deleted in whitelist.`})
+                await client.sendMessage(message.parse.to, `${number} deleted in whitelist.`)
             } else {
-                await client.sendMessage(message.parse.to, {text: `${number} failed to delete.`})
+                await client.sendMessage(message.parse.to, `${number} failed to delete.`)
             }
             break
         case 'list':
             const list = await whitelistHelper.getAllWhitelist()
             if (list.length === 0) return
             const listText = list.map(item => item.Number).join(', ')
-            await client.sendMessage(message.parse.to, {text: listText})
+            await client.sendMessage(message.parse.to, listText)
             break
         }
     }
