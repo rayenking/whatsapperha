@@ -1,11 +1,11 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface Whitelist extends Document {
-    Number: string;
+    number: string;
 }
 
 const WhitelistSchema: Schema = new Schema({
-    Number: {type: String, required: true}
+    number: {type: String, required: true}
 })
 
 export const WhitelistModel = mongoose.model<Whitelist>('Whitelist', WhitelistSchema)

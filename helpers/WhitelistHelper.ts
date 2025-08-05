@@ -8,12 +8,12 @@ class WhitelistHelper {
     }
 
     async getWhitelistByNumber(number: string): Promise<Whitelist | null> {
-        const whitelist = await WhitelistModel.findOne({ Number: number }).exec()
+        const whitelist = await WhitelistModel.findOne({ number: number }).exec()
         return whitelist;
     }
 
     async isWhitelist(number: string): Promise<boolean> {
-        const whitelist = await WhitelistModel.findOne({ Number: number }).exec()
+        const whitelist = await WhitelistModel.findOne({ number: number }).exec()
         return whitelist ? true : false;
     }
 
@@ -29,7 +29,7 @@ class WhitelistHelper {
 
     async delWhitelist(number: string): Promise<boolean> {
         try {
-            await WhitelistModel.deleteOne({ Number: number })
+            await WhitelistModel.deleteOne({ number: number })
             return true;
         } catch (e) {
             return false;

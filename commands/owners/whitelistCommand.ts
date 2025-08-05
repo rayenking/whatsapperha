@@ -35,7 +35,7 @@ class WhitelistCommand {
             var number = parseNumber(args[1])
             var isWhitelist = await whitelistHelper.isWhitelist(number)
             if (isWhitelist) return client.sendMessage(message.parse.to, `${number} is already in whitelist`)
-            const add = await whitelistHelper.addWhitelist({Number: number} as Whitelist)
+            const add = await whitelistHelper.addWhitelist({number: number} as Whitelist)
             if (add){
                 await client.sendMessage(message.parse.to, `${number} added to whitelist.`)
             } else {
@@ -56,7 +56,7 @@ class WhitelistCommand {
         case 'list':
             const list = await whitelistHelper.getAllWhitelist()
             if (list.length === 0) return
-            const listText = list.map(item => item.Number).join(', ')
+            const listText = list.map(item => item.number).join(', ')
             await client.sendMessage(message.parse.to, listText)
             break
         }
