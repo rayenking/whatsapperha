@@ -3,6 +3,8 @@ import { CarouselMessage, InteractiveMessage, ParseMessage, WhatsappClientOption
 import { exec } from 'child_process';
 import { updatePrefix } from "@rhook/hook";
 import fs from 'fs';
+import { Logger } from "pino";
+import Pino from "pino";
 
 export let DEFAULT_PREFIX = ''
 
@@ -30,12 +32,20 @@ export class RhClient extends MessageFormater {
     public whatsapp: WASocket
     public options: WhatsappClientOptions
     public fromSystem: { [key: string]: boolean } = {}
+    public rlog: Logger
 
     constructor(whatsapp: WASocket, options: WhatsappClientOptions) {
 
         super()
         this.whatsapp = whatsapp
         this.options = options
+        this.rlog = Pino({
+            level: process.env.LOG_LEVEL || 'info',
+            name: 'rhook-client',
+            transport: {
+                target: 'pino-pretty',
+            }
+        })
     }
 
     public getPrefix(): string {

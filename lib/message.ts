@@ -12,11 +12,11 @@ import { waitSince } from "./hook";
 // Utility function to handle list and button messages
 const handleButtonAndListResponse = (msg: ParseMessage): void => {
     const { parse, message } = msg;
-    
+
     if (parse.type === 'listResponseMessage') {
         const listResponse = message?.listResponseMessage;
         const listQuotedResponse = listResponse?.contextInfo?.quotedMessage?.listMessage;
-        
+
         parse.list = {
             selectedText: listResponse?.title || null,
             selectedRowId: listResponse?.singleSelectReply?.selectedRowId || null,
@@ -39,7 +39,7 @@ const handleButtonAndListResponse = (msg: ParseMessage): void => {
 
 const handleFunctions = (msg: ParseMessage, client: RhClient): void => {
     msg.edit = (text: string) => {
-        return client.whatsapp.sendMessage(msg.to, { text, edit: msg.key});
+        return client.whatsapp.sendMessage(msg.to, { text, edit: msg.key });
     };
 
     msg.editWithMentions = (text: string, mentionedJid: string[]) => {
@@ -55,7 +55,7 @@ const handleFunctions = (msg: ParseMessage, client: RhClient): void => {
     };
 
     msg.reply = (text: string) => {
-        return client.whatsapp.sendMessage(msg.to, { text }, { quoted: msg});
+        return client.whatsapp.sendMessage(msg.to, { text }, { quoted: msg });
     };
 
     msg.delete = () => {
@@ -69,27 +69,27 @@ const handleFunctions = (msg: ParseMessage, client: RhClient): void => {
     msg.forward = (to: string, force: boolean = false) => {
         return client.forwardMessage(to, msg, force)
     }
-    
+
     msg.download = async () => {
         let path: string = '';
         switch (msg.parse.type) {
             case 'imageMessage':
-                var buffer = await downloadMediaMessage(msg, 'buffer', { })
+                var buffer = await downloadMediaMessage(msg, 'buffer', {})
                 await writeFile(`./downloads/${msg.key.id}.jpg`, buffer)
                 path = `./downloads/${msg.key.id}.jpg`
                 break;
             case 'documentMessage':
-                var buffer = await downloadMediaMessage(msg, 'buffer', { })
+                var buffer = await downloadMediaMessage(msg, 'buffer', {})
                 await writeFile(`./downloads/${msg.key.id}.jpg`, buffer)
                 path = `./downloads/${msg.key.id}.jpg`
                 break;
             case 'audioMessage':
-                var buffer = await downloadMediaMessage(msg, 'buffer', { })
+                var buffer = await downloadMediaMessage(msg, 'buffer', {})
                 await writeFile(`./downloads/${msg.key.id}.jpg`, buffer)
                 path = `./downloads/${msg.key.id}.jpg`
                 break;
             case 'videoMessage':
-                var buffer = await downloadMediaMessage(msg, 'buffer', { })
+                var buffer = await downloadMediaMessage(msg, 'buffer', {})
                 await writeFile(`./downloads/${msg.key.id}.jpg`, buffer)
                 path = `./downloads/${msg.key.id}.jpg`
                 break;
@@ -146,15 +146,15 @@ export const MessageParse = (msg: ParseMessage, client: RhClient): ParseMessage 
         list: null,
         button: null,
     };
-        msg.waitSince = (params: HookParameter) => waitSince({
-            types: params.types,
-            waitMsg: msg,
-            timeout: params.timeout || 10000,
-            timeoutCallback: params.timeoutCallback,
-            cancelText: params.cancelText || 'Cancelled.',
-            ignoreSelf: params.ignoreSelf || true,
-            ignoreId: params.ignoreId || '',
-        })
+    msg.waitSince = (params: HookParameter) => waitSince({
+        types: params.types,
+        waitMsg: msg,
+        timeout: params.timeout || 10000,
+        timeoutCallback: params.timeoutCallback,
+        cancelText: params.cancelText || 'Cancelled.',
+        ignoreSelf: params.ignoreSelf || true,
+        ignoreId: params.ignoreId || '',
+    })
 
     handleButtonAndListResponse(msg);
     handleFunctions(msg, client);
