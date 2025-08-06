@@ -16,6 +16,10 @@ import { setDefaultPrefix } from '@rhook/rh';
 
 dotenv.config();
 
+// Parse command line arguments
+const args = process.argv.slice(2);
+const hasPairingCodeFlag = args.includes('--pairing-code');
+
 const isCompiled = __filename.endsWith('.js');
 const baseDir = isCompiled ? './dist' : '.';
 const commandPath = path.join(baseDir, 'commands');
@@ -24,13 +28,16 @@ const commandDirectories = fs.readdirSync(commandPath, { withFileTypes: true })
   .map(dirent => dirent.name);
 
 const options: WhatsappClientOptions = {
-  pairingCode: false
+  pairingCode: hasPairingCodeFlag
 };
 
 const rynshook = new WhatsappClient(options);
 
 rynshook.rlog.info(isCompiled ? 'Running in compiled mode' : 'Running in development mode');
 rynshook.rlog.info(`Base Directory: ${baseDir}`);
+if (hasPairingCodeFlag) {
+  rynshook.rlog.info('Pairing code mode enabled');
+}
 
 setDefaultPrefix('!')
 

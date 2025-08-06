@@ -79,7 +79,11 @@ ADMINS=6281234567890,6289876543210
 
 ### Development Mode
 ```bash
+# Normal mode (QR code authentication)
 yarn dev
+
+# Pairing code mode
+yarn dev -- --pairing-code
 ```
 
 ### Production Mode
@@ -236,6 +240,7 @@ setDefaultPrefix('.'); // Change prefix to '.'
 | Script | Description |
 |--------|-------------|
 | `yarn dev` | Run in development mode with hot reload |
+| `yarn dev -- --pairing-code` | Run in development mode with pairing code authentication |
 | `yarn build` | Build TypeScript to JavaScript |
 | `yarn start` | Start compiled application |
 | `yarn start:erha` | Start with PM2 process manager |

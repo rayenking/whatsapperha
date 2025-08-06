@@ -3,7 +3,7 @@
 // Copyright (c) 2022, Ryns (https://github.com/rynkings).
 //------------------------------------------------------------------------------
 
-import makeWASocket, { DisconnectReason, useMultiFileAuthState, makeInMemoryStore, WASocket, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, ConnectionState, WAMessage, MessageUpsertType, Browsers } from '@rhook/baileys';
+import makeWASocket, { DisconnectReason, useMultiFileAuthState, WASocket, fetchLatestBaileysVersion, makeCacheableSignalKeyStore, ConnectionState, WAMessage, MessageUpsertType, Browsers } from '@rhook/baileys';
 import { WhatsappClientOptions } from '@rhook/types';
 
 import { Boom } from '@hapi/boom';
@@ -24,7 +24,7 @@ const question = (text: string) => new Promise<string>((resolve) => rl.question(
 export class WhatsappClient {
     private whatsapp!: WASocket;
     private logger: Logger;
-    private store: ReturnType<typeof makeInMemoryStore>;
+    // private store: ReturnType<typeof makeInMemoryStore>;
     private authPath: string;
     private options: WhatsappClientOptions;
     private rh: RhClient;
@@ -54,10 +54,10 @@ export class WhatsappClient {
         })
 
 
-        this.store = makeInMemoryStore({ logger: this.logger })
-        setInterval(() => {
-            this.store?.writeToFile(storePath)
-        }, 10_000)
+        // this.store = makeInMemoryStore({ logger: this.logger })
+        // setInterval(() => {
+        //     this.store?.writeToFile(storePath)
+        // }, 10_000)
 
         this.options = options
         this.rh = new RhClient(this.whatsapp, this.options);
@@ -82,12 +82,12 @@ export class WhatsappClient {
             },
             version: version,
             generateHighQualityLinkPreview: true,
-            browser: Browsers.macOS('Desktop'),
+            // browser: Browsers.macOS('Desktop'),
             markOnlineOnConnect: false,
         })
-        this.store?.bind(this.whatsapp.ev)
+        // this.store?.bind(this.whatsapp.ev)
 
-        if (this.options.pairingCode) {
+        if (this.options.pairingCode && !this.whatsapp.authState.creds.registered) {
             const phoneNumber = await question('Enter your phone number: ')
             const code = await this.whatsapp.requestPairingCode(phoneNumber)
             console.log(`Pairing code: ${code}`)
