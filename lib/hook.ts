@@ -328,7 +328,10 @@ const condition = (message: any, event: EventListener): boolean => {
         'contains': commands.some(command => messageText.includes(event.prefix + command)),
         'exact': commands.some(command => messageText === event.prefix + command),
         'endswith': commands.some(command => messageText.endsWith(command)),
-        'regex': commands.some(command => messageText.match(command))
+    }
+
+    if (type === 'regex'){
+      matchTypes['regex'] = commands.some(command => messageText.match(command))
     }
 
     const isMatch: boolean = matchTypes[type];
